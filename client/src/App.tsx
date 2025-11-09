@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import MovieDetail from "@/pages/MovieDetail";
 import MovieBooking from "@/pages/MovieBooking";
-import EventDetailPage from "@/pages/EventDetail";
+import EventBookingPage from "@/pages/EventBooking";
 import Confirmation from "@/pages/Confirmation";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
@@ -15,9 +15,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/movie/:id" component={MovieDetail} />
-      <Route path="/movie/:id/seats" component={MovieBooking} />
-      <Route path="/event/:id" component={EventDetailPage} />
+      <Route path="/event/:id" component={MovieDetail} />
+      <Route path="/event/:id/seats" component={MovieBooking} />
+      <Route path="/event/:id/book" component={EventBookingPage} />
       <Route path="/confirmation" component={Confirmation} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />

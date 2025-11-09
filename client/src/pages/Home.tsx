@@ -1,24 +1,34 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import BannerCarousel from "@/components/BannerCarousel";
 import CategorySection from "@/components/CategorySection";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import type { Event } from "@shared/schema";
 
 import banner1 from '@assets/generated_images/Action_movie_banner_explosion_4fe37ee5.png';
 import banner2 from '@assets/generated_images/Concert_stadium_stage_lights_df115b14.png';
 import banner3 from '@assets/generated_images/Bollywood_dance_scene_banner_21260230.png';
 import banner4 from '@assets/generated_images/Cricket_stadium_night_match_7d98a7a3.png';
 import banner5 from '@assets/generated_images/Theater_stage_red_curtains_cef4faff.png';
-import poster1 from '@assets/generated_images/Sci-fi_movie_poster_neon_3110f571.png';
-import poster2 from '@assets/generated_images/Romantic_comedy_couple_poster_25cfdf8a.png';
-import poster3 from '@assets/generated_images/Horror_mansion_poster_dark_34bd089b.png';
-import poster4 from '@assets/generated_images/Rock_concert_guitar_lightning_095ca897.png';
-import poster5 from '@assets/generated_images/Comedy_show_microphone_spotlight_29149b4d.png';
 
 export default function Home() {
   const [, setLocation] = useLocation();
-  
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const { data: events = [], isLoading } = useQuery<Event[]>({
+    queryKey: ['/api/events', activeCategory],
+    queryFn: async () => {
+      const url = activeCategory === 'all' 
+        ? '/api/events' 
+        : `/api/events?category=${activeCategory}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
+    },
+  });
+
   const banners = [
     { id: '1', imageUrl: banner1, title: 'Mission Impossible: Final Reckoning', category: 'ACTION BLOCKBUSTER' },
     { id: '2', imageUrl: banner2, title: 'Coldplay Music of the Spheres Tour', category: 'LIVE IN CONCERT' },
@@ -27,108 +37,32 @@ export default function Home() {
     { id: '5', imageUrl: banner5, title: 'The Phantom of the Opera', category: 'THEATER' },
   ];
 
-  const movies = [
-    {
-      id: '1',
-      imageUrl: poster1,
-      title: 'Interstellar Odyssey',
-      category: 'Movie',
-      venue: 'Multiple Cinemas',
-      rating: '8.9',
-      language: 'English',
-      genre: 'Sci-Fi',
-      price: 250,
-      featured: true,
-    },
-    {
-      id: '2',
-      imageUrl: poster2,
-      title: 'Love in Paris',
-      category: 'Movie',
-      venue: 'Multiple Cinemas',
-      rating: '7.5',
-      language: 'English',
-      genre: 'Romance',
-      price: 200,
-    },
-    {
-      id: '3',
-      imageUrl: poster3,
-      title: 'The Haunting',
-      category: 'Movie',
-      venue: 'Multiple Cinemas',
-      rating: '8.2',
-      language: 'English',
-      genre: 'Horror',
-      price: 220,
-    },
-    {
-      id: '4',
-      imageUrl: poster1,
-      title: 'Galactic Wars',
-      category: 'Movie',
-      venue: 'Multiple Cinemas',
-      rating: '9.1',
-      language: 'English',
-      genre: 'Action',
-      price: 300,
-    },
-    {
-      id: '5',
-      imageUrl: poster2,
-      title: 'Summer Romance',
-      category: 'Movie',
-      venue: 'Multiple Cinemas',
-      rating: '7.8',
-      language: 'Hindi',
-      genre: 'Drama',
-      price: 180,
-    },
-  ];
-
-  const events = [
-    {
-      id: '6',
-      imageUrl: poster4,
-      title: 'Rock Nation Tour 2024',
-      category: 'Concert',
-      venue: 'DY Patil Stadium',
-      date: 'Sat, 15 Nov',
-      genre: 'Rock',
-      price: 999,
-    },
-    {
-      id: '7',
-      imageUrl: poster5,
-      title: 'Stand Up Comedy Night',
-      category: 'Comedy',
-      venue: 'Canvas Laugh Club',
-      date: 'Fri, 12 Nov',
-      genre: 'Comedy',
-      price: 499,
-    },
-    {
-      id: '8',
-      imageUrl: poster4,
-      title: 'Sunburn Festival',
-      category: 'Concert',
-      venue: 'Mahalaxmi Race Course',
-      date: 'Sun, 20 Nov',
-      genre: 'EDM',
-      price: 1500,
-    },
-  ];
-
-  const [activeCategory, setActiveCategory] = useState('all');
-
   const categories = [
     { id: 'all', label: 'All' },
-    { id: 'movies', label: 'Movies' },
-    { id: 'concerts', label: 'Concerts' },
-    { id: 'sports', label: 'Sports' },
-    { id: 'theater', label: 'Theater' },
-    { id: 'comedy', label: 'Comedy' },
+    { id: 'Movie', label: 'Movies' },
+    { id: 'Concert', label: 'Concerts' },
+    { id: 'Sports', label: 'Sports' },
+    { id: 'Theater', label: 'Theater' },
+    { id: 'Comedy', label: 'Comedy' },
   ];
+
+  const movies = events.filter(e => e.category === 'Movie');
+  const concerts = events.filter(e => e.category === 'Concert');
+  const otherEvents = events.filter(e => !['Movie', 'Concert'].includes(e.category));
+
+  const formatEvent = (event: Event) => ({
+    id: event.id,
+    imageUrl: event.imageUrl,
+    title: event.name,
+    category: event.category,
+    venue: event.venue,
+    date: event.date,
+    rating: event.rating || undefined,
+    language: event.language || undefined,
+    genre: event.genre || undefined,
+    price: event.price,
+    featured: !!event.featured,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -150,19 +84,43 @@ export default function Home() {
           ))}
         </div>
 
-        <CategorySection
-          title="Recommended Movies"
-          events={movies}
-          onEventClick={(id) => setLocation(`/movie/${id}`)}
-          onViewAll={() => console.log('View all movies')}
-        />
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Loading events...</div>
+        ) : events.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">No events available yet.</p>
+            <Button onClick={() => setLocation('/admin')}>Add Your First Event</Button>
+          </div>
+        ) : (
+          <>
+            {(activeCategory === 'all' || activeCategory === 'Movie') && movies.length > 0 && (
+              <CategorySection
+                title="Recommended Movies"
+                events={movies.map(formatEvent)}
+                onEventClick={(id) => setLocation(`/event/${id}`)}
+                onViewAll={() => console.log('View all movies')}
+              />
+            )}
 
-        <CategorySection
-          title="Live Events & Concerts"
-          events={events}
-          onEventClick={(id) => setLocation(`/event/${id}`)}
-          onViewAll={() => console.log('View all events')}
-        />
+            {(activeCategory === 'all' || activeCategory === 'Concert') && concerts.length > 0 && (
+              <CategorySection
+                title="Live Events & Concerts"
+                events={concerts.map(formatEvent)}
+                onEventClick={(id) => setLocation(`/event/${id}`)}
+                onViewAll={() => console.log('View all events')}
+              />
+            )}
+
+            {(activeCategory === 'all' || !['Movie', 'Concert'].includes(activeCategory)) && otherEvents.length > 0 && (
+              <CategorySection
+                title="More Events"
+                events={otherEvents.map(formatEvent)}
+                onEventClick={(id) => setLocation(`/event/${id}`)}
+                onViewAll={() => console.log('View all other events')}
+              />
+            )}
+          </>
+        )}
 
         <div className="mt-12 text-center">
           <Button

@@ -5,8 +5,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function AdminPanel() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -22,9 +29,53 @@ export default function AdminPanel() {
     genre: '',
   });
 
+  const createEventMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create event');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        title: "Success!",
+        description: "Event created successfully",
+      });
+      setLocation('/');
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create event. Please check all fields.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Event created:', formData);
+    
+    const eventData = {
+      name: formData.name,
+      category: formData.category,
+      imageUrl: formData.imageUrl,
+      bannerUrl: formData.bannerUrl || undefined,
+      description: formData.description,
+      venue: formData.venue,
+      date: formData.date,
+      price: parseInt(formData.price),
+      language: formData.language || undefined,
+      rating: formData.rating || undefined,
+      duration: formData.duration || undefined,
+      genre: formData.genre || undefined,
+      featured: 0,
+    };
+
+    createEventMutation.mutate(eventData);
   };
 
   return (
@@ -51,6 +102,7 @@ export default function AdminPanel() {
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
+                required
               >
                 <SelectTrigger data-testid="select-category">
                   <SelectValue placeholder="Select category" />
@@ -182,8 +234,13 @@ export default function AdminPanel() {
               />
             </div>
 
-            <Button type="submit" className="w-full" data-testid="button-create-event">
-              Create Event
+            <Button 
+              type="submit" 
+              className="w-full" 
+              data-testid="button-create-event"
+              disabled={createEventMutation.isPending}
+            >
+              {createEventMutation.isPending ? 'Creating...' : 'Create Event'}
             </Button>
           </form>
         </Card>

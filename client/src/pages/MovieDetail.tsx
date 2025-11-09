@@ -1,13 +1,38 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import EventDetail from "@/components/EventDetail";
 import MovieTimeSlots from "@/components/MovieTimeSlots";
-import poster from '@assets/generated_images/Sci-fi_movie_poster_neon_3110f571.png';
+import type { Event } from "@shared/schema";
 
 export default function MovieDetail() {
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/event/:id");
   const [showTimeSlots, setShowTimeSlots] = useState(false);
+
+  const { data: event, isLoading } = useQuery<Event>({
+    queryKey: ['/api/events', params?.id],
+    enabled: !!params?.id,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="text-center py-12 text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="text-center py-12 text-muted-foreground">Event not found</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,25 +40,30 @@ export default function MovieDetail() {
       
       {!showTimeSlots ? (
         <EventDetail
-          imageUrl={poster}
-          title="Interstellar Odyssey"
-          category="Movie"
-          rating="8.9"
-          duration="2h 45m"
-          genre="Sci-Fi/Thriller"
-          language="English"
-          date="Fri, 10 Nov - Sun, 12 Nov"
-          venue="Multiple Cinemas"
-          price={250}
-          description="A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival. As time runs out, they must journey beyond the stars to discover the mysteries of the universe and save their loved ones back on Earth. Experience the stunning visuals and mind-bending story on the big screen."
-          onBookNow={() => setShowTimeSlots(true)}
+          imageUrl={event.imageUrl}
+          title={event.name}
+          category={event.category}
+          rating={event.rating || undefined}
+          duration={event.duration || undefined}
+          genre={event.genre || undefined}
+          language={event.language || undefined}
+          date={event.date}
+          venue={event.venue}
+          price={event.price}
+          description={event.description}
+          onBookNow={() => {
+            if (event.category === 'Movie') {
+              setShowTimeSlots(true);
+            } else {
+              setLocation(`/event/${event.id}/book`);
+            }
+          }}
         />
       ) : (
         <div className="py-8">
           <MovieTimeSlots
             onSelectTime={(theater, time) => {
-              console.log('Selected:', theater, time);
-              setLocation('/movie/1/seats');
+              setLocation(`/event/${event.id}/seats?theater=${encodeURIComponent(theater)}&time=${encodeURIComponent(time)}`);
             }}
           />
         </div>
