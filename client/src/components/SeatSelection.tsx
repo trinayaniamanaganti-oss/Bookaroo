@@ -47,6 +47,10 @@ export default function SeatSelection({ onConfirm }: SeatSelectionProps) {
 
   const selectedSeats = seats.filter((s) => s.type === 'selected');
   const totalPrice = selectedSeats.reduce((sum, seat) => sum + seat.price, 0);
+  
+  // Debug log
+  console.log('Selected seats:', selectedSeats);
+  console.log('Calculated total price:', totalPrice);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -130,7 +134,10 @@ export default function SeatSelection({ onConfirm }: SeatSelectionProps) {
               data-testid="button-proceed-payment"
               size="lg"
               disabled={selectedSeats.length === 0}
-              onClick={() => onConfirm?.(selectedSeats, totalPrice)}
+              onClick={() => {
+                console.log('Proceeding with total price:', totalPrice);
+                onConfirm?.(selectedSeats, totalPrice);
+              }}
             >
               Proceed to Pay
             </Button>

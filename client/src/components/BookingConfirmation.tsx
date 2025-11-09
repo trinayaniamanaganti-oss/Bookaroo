@@ -69,7 +69,9 @@ export default function BookingConfirmation({
 
               <div>
                 <p className="text-muted-foreground">Total Amount Paid</p>
-                <p className="text-2xl font-bold text-primary" data-testid="text-total">₹{totalPrice}</p>
+                <p className="text-2xl font-bold text-primary" data-testid="text-total">
+                  ₹{totalPrice?.toString() || '0'}
+                </p>
               </div>
 
               <div>

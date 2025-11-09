@@ -9,6 +9,7 @@ export interface IStorage {
   getEvent(id: string): Promise<Event | undefined>;
   listEvents(category?: string): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
+  deleteEvent(id: string): Promise<void>;
   
   getBooking(id: string): Promise<Booking | undefined>;
   createBooking(booking: InsertBooking): Promise<Booking>;
@@ -47,14 +48,27 @@ export class MemStorage implements IStorage {
     return this.events.get(id);
   }
 
-  async listEvents(category?: string): Promise<Event[]> {
+  async listEvents(category?: string, search?: string): Promise<Event[]> {
     const events = Array.from(this.events.values());
+    let filteredEvents = events;
+    
     if (category && category !== 'all') {
-      return events.filter(event => 
+      filteredEvents = filteredEvents.filter(event => 
         event.category.toLowerCase() === category.toLowerCase()
       );
     }
-    return events;
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredEvents = filteredEvents.filter(event =>
+        event.name.toLowerCase().includes(searchLower) ||
+        event.description.toLowerCase().includes(searchLower) ||
+        (event.genre && event.genre.toLowerCase().includes(searchLower)) ||
+        (event.language && event.language.toLowerCase().includes(searchLower))
+      );
+    }
+
+    return filteredEvents;
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
@@ -73,6 +87,10 @@ export class MemStorage implements IStorage {
     };
     this.events.set(id, event);
     return event;
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    this.events.delete(id);
   }
 
   async getBooking(id: string): Promise<Booking | undefined> {

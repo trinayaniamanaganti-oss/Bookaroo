@@ -7,34 +7,53 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import type { Event } from "@shared/schema";
 
-import banner1 from '@assets/generated_images/Action_movie_banner_explosion_4fe37ee5.png';
-import banner2 from '@assets/generated_images/Concert_stadium_stage_lights_df115b14.png';
-import banner3 from '@assets/generated_images/Bollywood_dance_scene_banner_21260230.png';
-import banner4 from '@assets/generated_images/Cricket_stadium_night_match_7d98a7a3.png';
-import banner5 from '@assets/generated_images/Theater_stage_red_curtains_cef4faff.png';
-
 export default function Home() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
+  const searchParams = new URLSearchParams(location.split('?')[1]);
+  const searchQuery = searchParams.get('search') || '';
+
+  const params = new URLSearchParams();
+  if (activeCategory !== 'all') params.set('category', activeCategory);
+  if (searchQuery) params.set('search', searchQuery);
+  const url = params.toString() ? `/api/events?${params.toString()}` : '/api/events';
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
-    queryKey: ['/api/events', activeCategory],
-    queryFn: async () => {
-      const url = activeCategory === 'all' 
-        ? '/api/events' 
-        : `/api/events?category=${activeCategory}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      return response.json();
-    },
+    queryKey: [url],
+    // use default queryFn (configured in queryClient) so seed merging/fallback works
   });
 
   const banners = [
-    { id: '1', imageUrl: banner1, title: 'Mission Impossible: Final Reckoning', category: 'ACTION BLOCKBUSTER' },
-    { id: '2', imageUrl: banner2, title: 'Coldplay Music of the Spheres Tour', category: 'LIVE IN CONCERT' },
-    { id: '3', imageUrl: banner3, title: 'Pathaan Returns', category: 'BOLLYWOOD SPECTACULAR' },
-    { id: '4', imageUrl: banner4, title: 'India vs Australia Final Match', category: 'CRICKET WORLD CUP' },
-    { id: '5', imageUrl: banner5, title: 'The Phantom of the Opera', category: 'THEATER' },
+    { 
+      id: '1', 
+      imageUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?auto=format&fit=crop&w=1920&h=600&q=80', 
+      title: 'Mission Impossible: Final Reckoning', 
+      category: 'ACTION BLOCKBUSTER' 
+    },
+    { 
+      id: '2', 
+      imageUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1920&h=600&q=80', 
+      title: 'Coldplay Music of the Spheres Tour', 
+      category: 'LIVE IN CONCERT' 
+    },
+    { 
+      id: '3', 
+      imageUrl: 'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=1920&h=600&q=80', 
+      title: 'Pathaan Returns', 
+      category: 'BOLLYWOOD SPECTACULAR' 
+    },
+    { 
+      id: '4', 
+      imageUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1920&h=600&q=80', 
+      title: 'India vs Australia Final Match', 
+      category: 'CRICKET WORLD CUP' 
+    },
+    { 
+      id: '5', 
+      imageUrl: 'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?auto=format&fit=crop&w=1920&h=600&q=80', 
+      title: 'The Phantom of the Opera', 
+      category: 'THEATER' 
+    },
   ];
 
   const categories = [
@@ -44,11 +63,17 @@ export default function Home() {
     { id: 'Sports', label: 'Sports' },
     { id: 'Theater', label: 'Theater' },
     { id: 'Comedy', label: 'Comedy' },
+    { id: 'Other', label: 'Other' },
   ];
 
+  const mainCategories = ['Movie', 'Concert', 'Sports', 'Theater', 'Comedy'];
+  
   const movies = events.filter(e => e.category === 'Movie');
   const concerts = events.filter(e => e.category === 'Concert');
-  const otherEvents = events.filter(e => !['Movie', 'Concert'].includes(e.category));
+  const sports = events.filter(e => e.category === 'Sports');
+  const theater = events.filter(e => e.category === 'Theater');
+  const comedy = events.filter(e => e.category === 'Comedy');
+  const otherEvents = events.filter(e => !mainCategories.includes(e.category));
 
   const formatEvent = (event: Event) => ({
     id: event.id,
@@ -107,13 +132,40 @@ export default function Home() {
                 title="Live Events & Concerts"
                 events={concerts.map(formatEvent)}
                 onEventClick={(id) => setLocation(`/event/${id}`)}
-                onViewAll={() => console.log('View all events')}
+                onViewAll={() => console.log('View all concerts')}
               />
             )}
 
-            {(activeCategory === 'all' || !['Movie', 'Concert'].includes(activeCategory)) && otherEvents.length > 0 && (
+            {(activeCategory === 'all' || activeCategory === 'Sports') && sports.length > 0 && (
               <CategorySection
-                title="More Events"
+                title="Sports Events"
+                events={sports.map(formatEvent)}
+                onEventClick={(id) => setLocation(`/event/${id}`)}
+                onViewAll={() => console.log('View all sports')}
+              />
+            )}
+
+            {(activeCategory === 'all' || activeCategory === 'Theater') && theater.length > 0 && (
+              <CategorySection
+                title="Theater & Arts"
+                events={theater.map(formatEvent)}
+                onEventClick={(id) => setLocation(`/event/${id}`)}
+                onViewAll={() => console.log('View all theater events')}
+              />
+            )}
+
+            {(activeCategory === 'all' || activeCategory === 'Comedy') && comedy.length > 0 && (
+              <CategorySection
+                title="Comedy Shows"
+                events={comedy.map(formatEvent)}
+                onEventClick={(id) => setLocation(`/event/${id}`)}
+                onViewAll={() => console.log('View all comedy shows')}
+              />
+            )}
+
+            {(activeCategory === 'all' || activeCategory === 'Other') && otherEvents.length > 0 && (
+              <CategorySection
+                title="Other Events"
                 events={otherEvents.map(formatEvent)}
                 onEventClick={(id) => setLocation(`/event/${id}`)}
                 onViewAll={() => console.log('View all other events')}
@@ -121,17 +173,6 @@ export default function Home() {
             )}
           </>
         )}
-
-        <div className="mt-12 text-center">
-          <Button
-            variant="outline"
-            size="lg"
-            data-testid="button-admin"
-            onClick={() => setLocation('/admin')}
-          >
-            Add New Event (Admin)
-          </Button>
-        </div>
       </div>
     </div>
   );

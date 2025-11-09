@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -36,7 +36,21 @@ export default function AdminPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to create event');
+
+      if (!response.ok) {
+        const text = await response.text();
+        let message = text || response.statusText || 'Failed to create event';
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed?.error) {
+            message = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+          }
+        } catch (_) {
+          // ignore JSON parse errors
+        }
+        throw new Error(message);
+      }
+
       return response.json();
     },
     onSuccess: () => {
@@ -47,12 +61,47 @@ export default function AdminPanel() {
       });
       setLocation('/');
     },
-    onError: () => {
+    onError: (err: any) => {
+      const message = err?.message || 'Failed to create event. Please check all fields.';
       toast({
         title: "Error",
-        description: "Failed to create event. Please check all fields.",
+        description: message,
         variant: "destructive",
       });
+    },
+  });
+
+  // Fetch existing events so admin can remove them
+  const { data: events = [] as any[], isLoading: eventsLoading } = useQuery<any[]>({
+    queryKey: ['/api/events'],
+  });
+
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = text || res.statusText || 'Failed to delete event';
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed?.error) {
+            message = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+          }
+        } catch (_) {}
+        throw new Error(message);
+      }
+      return;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({ title: 'Deleted', description: 'Event removed successfully' });
+      setSelectedEventId(null);
+    },
+    onError: (err: any) => {
+      const message = err?.message || 'Failed to delete event';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     },
   });
 
@@ -67,13 +116,24 @@ export default function AdminPanel() {
       description: formData.description,
       venue: formData.venue,
       date: formData.date,
-      price: parseInt(formData.price),
+      // Ensure price is a valid integer before sending
+      price: Number(formData.price),
       language: formData.language || undefined,
       rating: formData.rating || undefined,
       duration: formData.duration || undefined,
       genre: formData.genre || undefined,
       featured: 0,
     };
+
+    // Basic client-side validation: price must be a number
+    if (Number.isNaN(eventData.price)) {
+      toast({
+        title: 'Invalid price',
+        description: 'Please enter a valid starting price (number).',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     createEventMutation.mutate(eventData);
   };
@@ -273,6 +333,47 @@ export default function AdminPanel() {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Delete control at the bottom - select an existing event and remove it */}
+      <div className="max-w-4xl mx-auto p-6 mt-6">
+        <h2 className="text-xl font-bold mb-4">Remove Event</h2>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <select
+              className="flex-1 px-3 py-2 border rounded"
+              value={selectedEventId ?? ''}
+              onChange={(e) => setSelectedEventId(e.target.value || null)}
+              disabled={eventsLoading}
+              data-testid="select-remove-event"
+            >
+              <option value="">-- Select event to remove --</option>
+              {events.map((ev: any) => (
+                <option key={ev.id} value={ev.id}>{ev.name}</option>
+              ))}
+            </select>
+
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!selectedEventId) {
+                  toast({ title: 'No event selected', description: 'Please choose an event to delete', variant: 'destructive' });
+                  return;
+                }
+
+                // basic confirmation
+                // eslint-disable-next-line no-restricted-globals
+                if (!confirm('Are you sure you want to permanently delete this event?')) return;
+
+                deleteEventMutation.mutate(selectedEventId);
+              }}
+              disabled={!selectedEventId || deleteEventMutation.isPending}
+              data-testid="button-delete-event"
+            >
+              {deleteEventMutation.isPending ? 'Deleting...' : 'Delete Event'}
+            </Button>
+          </div>
+        </Card>
       </div>
     </div>
   );

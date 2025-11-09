@@ -10,14 +10,15 @@ export default function Confirmation() {
   const [bookingCode, setBookingCode] = useState<string>('');
   const [isSaving, setIsSaving] = useState(true);
   
-  const params = new URLSearchParams(location.split('?')[1]);
-  const eventId = params.get('eventId') || '';
-  const eventName = params.get('event') || 'Event';
-  const eventDate = params.get('date') || '';
-  const venue = params.get('venue') || '';
-  const seats = params.get('seats') || undefined;
-  const quantity = params.get('quantity') ? parseInt(params.get('quantity')!) : undefined;
-  const totalPrice = parseInt(params.get('total') || '0');
+  // Get the raw query string
+  const searchParams = new URLSearchParams(window.location.search);
+  const eventId = searchParams.get('eventId') || '';
+  const eventName = searchParams.get('event') || 'Event';
+  const eventDate = searchParams.get('date') || '';
+  const venue = searchParams.get('venue') || '';
+  const seats = searchParams.get('seats') || undefined;
+  const quantity = searchParams.get('quantity') ? parseInt(searchParams.get('quantity')!) : undefined;
+  const totalPrice = Number(searchParams.get('total'));
 
   const createBookingMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -50,7 +51,7 @@ export default function Confirmation() {
       venue,
       seats: seats || null,
       quantity: quantity || 1,
-      totalPrice,
+      totalPrice: totalPrice || 0,
       bookingCode: generatedCode,
     };
 
